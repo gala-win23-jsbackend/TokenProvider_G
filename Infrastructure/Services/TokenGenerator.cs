@@ -9,7 +9,13 @@ using System.Text;
 
 namespace Infrastructure.Services;
 
-public class TokenGenerator(IRefreshTokenService refreshTokenService)
+public interface ITokenGenerator
+{
+    AccessTokenResult GenerateAccessToken(TokenRequest tokenRequest, string refreshToken);
+    Task<RefreshTokenResult> GenerateRefreshTokenAsync(string userId, CancellationToken cts);
+}
+
+public class TokenGenerator(IRefreshTokenService refreshTokenService) : ITokenGenerator
 {
     private readonly IRefreshTokenService _refreshTokenService = refreshTokenService;
 
@@ -37,7 +43,7 @@ public class TokenGenerator(IRefreshTokenService refreshTokenService)
                 return new RefreshTokenResult
                 {
                     StatusCode = (int)HttpStatusCode.InternalServerError,
-                    Error = "Error generating token"
+                    Error = "An unexpexted error pccured while generating token"
                 };
             }
             else
@@ -90,13 +96,13 @@ public class TokenGenerator(IRefreshTokenService refreshTokenService)
     public static string GenerateJwtToken(ClaimsIdentity claims, DateTime expires)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("Token_Secret")!);
+        var key = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("TOKEN_SECRETKEY")!);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = claims,
             Expires = expires,
-            Issuer = Environment.GetEnvironmentVariable("Token_Issuer"),
-            Audience = Environment.GetEnvironmentVariable("Token_Audience"),
+            Issuer = Environment.GetEnvironmentVariable("TOKEN_ISSUER"),
+            Audience = Environment.GetEnvironmentVariable("TOKEN_AUDIENSE"),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
         var token = tokenHandler.CreateToken(tokenDescriptor);
